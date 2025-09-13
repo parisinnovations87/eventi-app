@@ -1,11 +1,11 @@
 // Configurazione dell'applicazione
 const CONFIG = {
     // Google Authentication
-    GOOGLE_CLIENT_ID: 'TUO_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: '471471145002-9a1ingg3fjlo1u3drhgm4jm4r0vgsktv.apps.googleusercontent.com',
     
     // Google Sheets Database
-    GOOGLE_SHEETS_ID: 'TUO_GOOGLE_SHEETS_ID',
-    GOOGLE_API_KEY: 'TUA_GOOGLE_API_KEY',
+    GOOGLE_SHEETS_ID: '1OFPd5iPJL7prqCJw52pfXGYZ3aHGcjX2McxSeA8cSjI',
+    GOOGLE_API_KEY: 'AIzaSyBlZupQt8FYXqXyEBuOFGzPWNVZnKmCurQ',
     
     // URL degli endpoint delle Google Sheets API
     SHEETS_API_BASE: 'https://sheets.googleapis.com/v4/spreadsheets',
