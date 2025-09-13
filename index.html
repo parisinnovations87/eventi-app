@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eventi Comunità - Trova eventi nella tua zona</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-calendar-alt"></i>
+                <h1>Eventi Comunità</h1>
+            </div>
+            <nav class="nav">
+                <div id="loginSection">
+                    <button id="loginBtn" class="btn-login">
+                        <i class="fab fa-google"></i>
+                        Accedi con Google
+                    </button>
+                </div>
+                <div id="userSection" class="user-section" style="display: none;">
+                    <img id="userPhoto" class="user-photo" alt="User">
+                    <span id="userName"></span>
+                    <button id="logoutBtn" class="btn-logout">Esci</button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Filtri -->
+            <section class="filters-section">
+                <div class="filters-container">
+                    <h2><i class="fas fa-filter"></i> Trova il tuo evento</h2>
+                    
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="categoryFilter">
+                                <i class="fas fa-tags"></i>
+                                Categoria
+                            </label>
+                            <select id="categoryFilter">
+                                <option value="">Tutte le categorie</option>
+                                <option value="festa-paese">Festa di paese</option>
+                                <option value="street-food">Street Food</option>
+                                <option value="festa-birra">Festa della birra</option>
+                                <option value="concerto">Concerti</option>
+                                <option value="bambini">Eventi per bambini</option>
+                                <option value="cultura">Cultura e libri</option>
+                                <option value="sport">Sport</option>
+                                <option value="altro">Altro</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="dateFilter">
+                                <i class="fas fa-calendar"></i>
+                                Data
+                            </label>
+                            <select id="dateFilter">
+                                <option value="">Tutte le date</option>
+                                <option value="today">Oggi</option>
+                                <option value="weekend">Questo weekend</option>
+                                <option value="week">Questa settimana</option>
+                                <option value="month">Questo mese</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="locationFilter">
+                                <i class="fas fa-map-marker-alt"></i>
+                                Distanza
+                            </label>
+                            <select id="locationFilter">
+                                <option value="">Ovunque</option>
+                                <option value="5">Entro 5 km</option>
+                                <option value="10">Entro 10 km</option>
+                                <option value="25">Entro 25 km</option>
+                                <option value="50">Entro 50 km</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <button id="getLocationBtn" class="btn-location">
+                                <i class="fas fa-crosshairs"></i>
+                                La mia posizione
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="search-actions">
+                        <button id="searchBtn" class="btn-search">
+                            <i class="fas fa-search"></i>
+                            Cerca Eventi
+                        </button>
+                        <button id="clearFiltersBtn" class="btn-clear">
+                            <i class="fas fa-times"></i>
+                            Pulisci filtri
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Toggle View -->
+            <section class="view-toggle">
+                <div class="toggle-buttons">
+                    <button id="listViewBtn" class="toggle-btn active">
+                        <i class="fas fa-list"></i>
+                        Lista
+                    </button>
+                    <button id="mapViewBtn" class="toggle-btn">
+                        <i class="fas fa-map"></i>
+                        Mappa
+                    </button>
+                </div>
+            </section>
+
+            <!-- Loading -->
+            <div id="loadingSection" class="loading" style="display: none;">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Caricamento eventi...</p>
+                </div>
+            </div>
+
+            <!-- Results Count -->
+            <div id="resultsCount" class="results-count" style="display: none;">
+                <span id="eventCount">0</span> eventi trovati
+            </div>
+
+            <!-- Lista Eventi -->
+            <section id="eventsListSection" class="events-section">
+                <div id="eventsList" class="events-grid">
+                    <!-- Eventi verranno caricati qui dinamicamente -->
+                </div>
+            </section>
+
+            <!-- Mappa Eventi -->
+            <section id="eventsMapSection" class="map-section" style="display: none;">
+                <div id="map" class="map-container"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Eventi Comunità. Trova e partecipa agli eventi della tua zona.</p>
+            <div class="footer-links">
+                <a href="#" id="addEventBtn">
+                    <i class="fas fa-plus"></i>
+                    Aggiungi evento
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal per aggiungere evento -->
+    <div id="addEventModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus"></i> Aggiungi nuovo evento</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <form id="addEventForm">
+                <div class="form-group">
+                    <label for="eventTitle">Titolo evento *</label>
+                    <input type="text" id="eventTitle" name="title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="eventCategory">Categoria *</label>
+                    <select id="eventCategory" name="category" required>
+                        <option value="">Seleziona categoria</option>
+                        <option value="festa-paese">Festa di paese</option>
+                        <option value="street-food">Street Food</option>
+                        <option value="festa-birra">Festa della birra</option>
+                        <option value="concerto">Concerti</option>
+                        <option value="bambini">Eventi per bambini</option>
+                        <option value="cultura">Cultura e libri</option>
+                        <option value="sport">Sport</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventDate">Data *</label>
+                        <input type="date" id="eventDate" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventTime">Ora</label>
+                        <input type="time" id="eventTime" name="time">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventLocation">Luogo *</label>
+                    <input type="text" id="eventLocation" name="location" placeholder="es. Piazza del Comune, Milano" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDescription">Descrizione</label>
+                    <textarea id="eventDescription" name="description" rows="4"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventPrice">Prezzo</label>
+                    <input type="text" id="eventPrice" name="price" placeholder="es. Gratuito, €10, €5-15">
+                </div>
+
+                <div class="form-group">
+                    <label for="eventContact">Contatto/Organizzatore</label>
+                    <input type="text" id="eventContact" name="contact" placeholder="Nome o email">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel">Annulla</button>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-plus"></i>
+                        Aggiungi evento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
+    <script src="map.js"></script>
+    <script src="filters.js"></script>
+    <script src="events.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
