@@ -34,16 +34,72 @@ class DatabaseManager {
             // Salta la prima riga (header) e converte i dati
             const events = data.values.slice(1).map(row => this.parseEventRow(row));
             
-            // Filtra eventi validi e futuri
-            const validEvents = events.filter(event => 
-                event && event.title && event.date && new Date(event.date) >= new Date()
-            );
+            // Filtra eventi validi secondo la nuova configurazione
+            let validEvents = events.filter(event => {
+                if (!event || !event.title || !event.date) return false;
+                
+                const eventDate = new Date(event.date);
+                const now = new Date();
+                
+                // Se non vogliamo mostrare eventi passati, filtro come prima
+                if (!CONFIG.EVENT_DISPLAY.SHOW_PAST_EVENTS) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return eventDate >= today;
+                }
+                
+                // Se vogliamo mostrare eventi passati con un limite
+                if (CONFIG.EVENT_DISPLAY.PAST_EVENTS_LIMIT_DAYS > 0) {
+                    const pastLimit = new Date();
+                    pastLimit.setDate(now.getDate() - CONFIG.EVENT_DISPLAY.PAST_EVENTS_LIMIT_DAYS);
+                    pastLimit.setHours(0, 0, 0, 0);
+                    return eventDate >= pastLimit;
+                }
+                
+                // Altrimenti mostra tutti gli eventi
+                return true;
+            });
+
+            // Ordina secondo la configurazione
+            validEvents.sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                const now = new Date();
+                
+                switch (CONFIG.EVENT_DISPLAY.SORT_ORDER) {
+                    case 'future_first':
+                        // Eventi futuri prima, poi passati (entrambi cronologici)
+                        const aFuture = dateA >= now;
+                        const bFuture = dateB >= now;
+                        
+                        if (aFuture && !bFuture) return -1;
+                        if (!aFuture && bFuture) return 1;
+                        
+                        return aFuture ? dateA - dateB : dateB - dateA;
+                        
+                    case 'past_first':
+                        // Eventi passati prima (più recenti), poi futuri
+                        return dateB - dateA;
+                        
+                    case 'mixed':
+                    default:
+                        // Ordine cronologico normale (più vecchi prima)
+                        return dateA - dateB;
+                }
+            });
 
             this.cache.events = validEvents;
             this.cache.lastUpdate = Date.now();
             
             if (CONFIG.DEBUG) {
                 console.log(`Caricati ${validEvents.length} eventi`);
+                console.log('Configurazione eventi:', CONFIG.EVENT_DISPLAY);
+                
+                // Debug: conta eventi passati vs futuri
+                const now = new Date();
+                const pastCount = validEvents.filter(e => new Date(e.date) < now).length;
+                const futureCount = validEvents.length - pastCount;
+                console.log(`Eventi passati: ${pastCount}, Eventi futuri: ${futureCount}`);
             }
             
             return validEvents;
@@ -129,7 +185,7 @@ class DatabaseManager {
         }
     }
 
-    // Valida i dati dell'evento
+    // Valida i dati dell'evento (MODIFICATA per accettare eventi passati)
     validateEventData(data) {
         if (!data.title || data.title.length < CONFIG.LIMITS.MIN_TITLE_LENGTH) {
             throw new Error('Il titolo è obbligatorio e deve essere di almeno 3 caratteri');
@@ -147,9 +203,16 @@ class DatabaseManager {
             throw new Error('La data è obbligatoria');
         }
         
-        const eventDate = new Date(data.date);
-        if (eventDate <= new Date()) {
-            throw new Error('La data deve essere futura');
+        // RIMUOVO il controllo che la data deve essere futura
+        // Ora si possono aggiungere anche eventi passati se la configurazione lo permette
+        if (!CONFIG.EVENT_DISPLAY.SHOW_PAST_EVENTS) {
+            const eventDate = new Date(data.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (eventDate < today) {
+                throw new Error('Non è possibile aggiungere eventi passati con la configurazione attuale');
+            }
         }
         
         if (!data.location || data.location.length < 3) {
@@ -311,7 +374,7 @@ class DatabaseManager {
         return events.filter(event => event.category === category);
     }
 
-    // Filtra eventi per data
+    // Filtra eventi per data (AGGIORNATO per gestire eventi passati)
     filterByDate(events, dateFilter) {
         if (!dateFilter || dateFilter === '') return events;
         
@@ -324,6 +387,16 @@ class DatabaseManager {
             switch (dateFilter) {
                 case 'today':
                     return eventDate.toDateString() === today.toDateString();
+                
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+                    return eventDate.toDateString() === yesterday.toDateString();
+                
+                case 'past_week':
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(today.getDate() - 7);
+                    return eventDate >= weekAgo && eventDate < today;
                 
                 case 'weekend':
                     const nextSaturday = new Date(today);
@@ -379,6 +452,83 @@ class DatabaseManager {
     // Converte gradi in radianti
     toRad(degrees) {
         return degrees * (Math.PI / 180);
+    }
+
+    // NUOVI METODI per gestire eventi passati
+
+    // Ottieni statistiche eventi (passati vs futuri)
+    getEventStats(events) {
+        const now = new Date();
+        const stats = {
+            total: events.length,
+            past: 0,
+            future: 0,
+            today: 0,
+            thisWeek: 0,
+            thisMonth: 0
+        };
+
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekFromNow = new Date(today);
+        weekFromNow.setDate(today.getDate() + 7);
+        const monthFromNow = new Date(today);
+        monthFromNow.setMonth(today.getMonth() + 1);
+
+        events.forEach(event => {
+            const eventDate = new Date(event.date);
+            
+            if (eventDate.toDateString() === today.toDateString()) {
+                stats.today++;
+            } else if (eventDate < today) {
+                stats.past++;
+            } else {
+                stats.future++;
+            }
+
+            if (eventDate >= today && eventDate <= weekFromNow) {
+                stats.thisWeek++;
+            }
+
+            if (eventDate >= today && eventDate <= monthFromNow) {
+                stats.thisMonth++;
+            }
+        });
+
+        return stats;
+    }
+
+    // Verifica se un evento è passato
+    isEventPast(event) {
+        const eventDate = new Date(event.date);
+        const now = new Date();
+
+        if (event.time) {
+            const [hours, minutes] = event.time.split(':').map(Number);
+            eventDate.setHours(hours, minutes, 0, 0);
+            return eventDate < now;
+        } else {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return eventDate < today;
+        }
+    }
+
+    // Ottieni eventi per stato temporale
+    getEventsByTimeStatus(events, status = 'all') {
+        switch (status) {
+            case 'past':
+                return events.filter(event => this.isEventPast(event));
+            case 'future':
+                return events.filter(event => !this.isEventPast(event));
+            case 'today':
+                const today = new Date();
+                return events.filter(event => {
+                    const eventDate = new Date(event.date);
+                    return eventDate.toDateString() === today.toDateString();
+                });
+            default:
+                return events;
+        }
     }
 }
 
