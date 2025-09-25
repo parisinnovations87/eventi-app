@@ -1,4 +1,4 @@
-// Configurazione dell'applicazione
+/ Configurazione dell'applicazione
 const CONFIG = {
     // Google Authentication
     GOOGLE_CLIENT_ID: '471471145002-9a1ingg3fjlo1u3drhgm4jm4r0vgsktv.apps.googleusercontent.com',
@@ -87,6 +87,13 @@ const CONFIG = {
         MIN_TITLE_LENGTH: 3,
         MAX_TITLE_LENGTH: 100,
         MAX_DESCRIPTION_LENGTH: 500
+    },
+    
+    // Configurazione visualizzazione eventi
+    EVENT_DISPLAY: {
+        SHOW_PAST_EVENTS: true,           // Mostra eventi passati
+        PAST_EVENTS_LIMIT_DAYS: 30,       // Giorni nel passato da mostrare (0 = tutti)
+        SORT_ORDER: 'mixed'               // 'future_first', 'past_first', 'mixed'
     },
     
     // Messaggi di errore
